@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:17
+    container_name: promotions-db
+    environment:
+      POSTGRES_USER: promo
+      POSTGRES_PASSWORD: promo123
+      POSTGRES_DB: promotions
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U promo -d promotions"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbit:
+    image: rabbitmq:4-management
+    container_name: promotions-rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: promotions-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/promotions
+      SPRING_RABBITMQ_HOST: rabbit
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbit:
+        condition: service_healthy
